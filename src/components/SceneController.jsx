@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
-import { useThree } from "@react-three/fiber";
+import { useEffect, useState, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
+import { animated } from "@react-spring/three";
 import * as THREE from "three";
+
 
 export const useResponsiveScale = () => {
     const [scale, setScale] = useState([2, 2, 2]);
-    const [position, setPosition] = useState([0.2, -0.7, 0]);
+    const [modelPosition, setPosition] = useState([0.2, -0.7, 0]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -34,15 +36,17 @@ export const useResponsiveScale = () => {
         };
     }, []);
 
-    return { scale, position };
+    return { scale, modelPosition };
 };
 
-export const CameraController = ({ zoom, rotationX, rotationY }) => {
+export const CameraController = ({ zoom, rotationX, rotationY, animate }) => {
     const { camera } = useThree();
 
     useEffect(() => {
 
-        const distance = 5 * zoom; // Distance from the object
+        if (animate) return;
+
+        const distance = 15 * zoom; // Distance from the object
         // Clamp the vertical rotation (rotationX) between limits (in radians)
         const minVerticalAngle = 0; // Limit up (e.g., 0 degrees up)
         const maxVerticalAngle = Math.PI / 4; // Limit down (e.g., 45 degrees down)
@@ -64,13 +68,33 @@ export const CameraController = ({ zoom, rotationX, rotationY }) => {
     return null;
 };
 
-export const CameraEvents = () => {
+export const AnimatedCamera = ({ position, rotation }) => {
+
+    const { set } = useThree();
+    const cameraRef = useRef();
+
+    useEffect(() => {
+        if (cameraRef.current)
+        {
+            set({ camera: cameraRef.current });
+        }
+    }, [set]);
+
+    return(
+        <animated.perspectiveCamera position={position} rotation={rotation} ref={cameraRef} />
+    )
+};
+
+export const CameraEvents = (state) => {
     const [rotationX, setRotationX] = useState(0);
     const [rotationY, setRotationY] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
 
     useEffect(() => {
+
+        if (state != "World") return;
+
         const handleMouseDown = (event) => {
             setIsDragging(true);
             setLastMousePos({ x: event.clientX, y: event.clientY });
@@ -103,7 +127,7 @@ export const CameraEvents = () => {
         };
     }, [isDragging, lastMousePos]);
 
-    return { rotationX, rotationY, isDragging, lastMousePos };
+    return { rotationX, rotationY };
 };
 
 export const Lighting = () => {
@@ -138,23 +162,23 @@ export const ZoomEvents = () => {
             });
         };
 
-        window.addEventListener("wheel", handleWheel, {passive:false});
+        window.addEventListener("wheel", handleWheel, { passive: false });
 
         return () => {
-            window.removeEventListener("wheel", handleWheel, {passive:false});
+            window.removeEventListener("wheel", handleWheel, { passive: false });
         };
     }, []);
 
     return { zoom };
 }
 
-export const SelectionEvent = ({setSelected}) => {
+export const SelectionEvent = ({ setSelected }) => {
     const raycaster = new THREE.Raycaster();
 
     const { camera, scene } = useThree();
 
     useEffect(() => {
-        const onMouseDown = (event) => {
+        const OnMouseUp = (event) => {
             const coords = new THREE.Vector2(
                 (event.clientX / window.innerWidth) * 2 - 1,
                 -(event.clientY / window.innerHeight) * 2 + 1
@@ -170,12 +194,12 @@ export const SelectionEvent = ({setSelected}) => {
             }
         };
 
-        window.addEventListener("mousedown", onMouseDown);
+        window.addEventListener("mouseup", OnMouseUp);
 
         return () => {
-            window.removeEventListener("mousedown", onMouseDown);
+            window.removeEventListener("mouseup", OnMouseUp);
         };
-    }, [camera, scene, setSelected]);
+    }, []);
 
     return null;
 }

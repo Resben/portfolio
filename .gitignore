@@ -27,3 +27,6 @@ dist-ssr
 
 # vscode
 .vscode
+
+# Myself
+*.glb

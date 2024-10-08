@@ -1,9 +1,9 @@
 import { SpacemanCanvas } from ".";
 
-const Hero = ({ scrollContainer }) => {
+const Hero = () => {
   return (
     <section className="main-canvas">
-      <SpacemanCanvas scrollContainer={scrollContainer} />
+      <SpacemanCanvas />
     </section>
   );
 };
