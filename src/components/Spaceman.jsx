@@ -1,14 +1,14 @@
 import { useAnimations, useGLTF } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import { act, Suspense, useEffect, useRef, useState } from "react";
-import { useSpring, animated, useSpringRef, to, config } from "@react-spring/three";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useSpring, animated, useSpringRef } from "@react-spring/three";
 import { Box } from '@react-three/drei';
-import * as THREE from "three";
 
 import mainScene from "../assets/3d/anotherScene.glb";
 
 import CanvasLoader from "./Loader";
 import { useResponsiveScale, CameraController, Lighting, CameraEvents, ZoomEvents, SelectionEvent } from "./SceneController";
+import GameDevelopment from "./GameDevelopment";
 
 const AnimatedGLB = ({ glb, scale, position }) => {
   const sceneRef = useRef();
@@ -46,7 +46,7 @@ const StateControl = (selected, setTargetPosition, setTargetRotation) => {
         case "World":
           setState("World");
           console.log("World");
-          setTargetPosition([0, 0, 0]);
+          setTargetPosition([0, 0, 15]);
           setTargetRotation([0, 0, 0]);
           break;
         case "Art":
@@ -123,12 +123,15 @@ const ControlStuff = ({toggleCameraState, activeCamera, camera}) => {
     
     }, [targetPosition, targetRotation]); // Trigger when the target position changes
 
-  useEffect(() => {
+    console.log(activeCamera, state);
+
+    useEffect(() => {
     const handleKeyPress = (event) => {
       if (event.key === 't') {
         setSelected("Games");
       }
     };
+
 
     // Add event listener
     window.addEventListener('keydown', handleKeyPress);
@@ -145,9 +148,10 @@ const ControlStuff = ({toggleCameraState, activeCamera, camera}) => {
       <Lighting />
       <StaticGLB glb={mainScene} scale={modelScale} position={modelPosition} />
       <SelectionEvent setSelected={setSelected} />
+      <GameDevelopment setSelected={setSelected}/>
       <animated.mesh position={springProps.position}>
-      <Box args={[1, 1, 1]} position={[1, 2.0, 0]}>
-          <meshStandardMaterial attach="material" color="orange" />
+      <Box args={[1, 1, 1]} position={[1, 6.0, 0]}>
+          <meshStandardMaterial attach="material" color="orange" name="hs" />
       </Box>
       </animated.mesh>
     </group>

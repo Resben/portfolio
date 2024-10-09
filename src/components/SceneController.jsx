@@ -114,7 +114,7 @@ export const CameraEvents = (state) => {
             window.removeEventListener("mousemove", handleMouseMove);
             window.removeEventListener("mouseup", handleMouseUp);
         };
-    }, [isDragging, lastMousePos]);
+    }, [isDragging, lastMousePos, state]);
 
     return { rotationX, rotationY };
 };
