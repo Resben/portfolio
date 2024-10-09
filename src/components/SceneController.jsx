@@ -39,12 +39,12 @@ export const useResponsiveScale = () => {
     return { scale, modelPosition };
 };
 
-export const CameraController = ({ zoom, rotationX, rotationY, animate }) => {
+export const CameraController = ({ zoom, rotationX, rotationY, state }) => {
     const { camera } = useThree();
 
     useEffect(() => {
 
-        if (animate) return;
+        if (state != "World") return;
 
         const distance = 15 * zoom; // Distance from the object
         // Clamp the vertical rotation (rotationX) between limits (in radians)
@@ -66,23 +66,6 @@ export const CameraController = ({ zoom, rotationX, rotationY, animate }) => {
     }, [rotationX, rotationY, camera, zoom]);
 
     return null;
-};
-
-export const AnimatedCamera = ({ position, rotation }) => {
-
-    const { set } = useThree();
-    const cameraRef = useRef();
-
-    useEffect(() => {
-        if (cameraRef.current)
-        {
-            set({ camera: cameraRef.current });
-        }
-    }, [set]);
-
-    return(
-        <animated.perspectiveCamera position={position} rotation={rotation} ref={cameraRef} />
-    )
 };
 
 export const CameraEvents = (state) => {
@@ -188,7 +171,8 @@ export const SelectionEvent = ({ setSelected }) => {
             const intersects = raycaster.intersectObjects(scene.children, true);
 
             if (intersects.length > 0) {
-                setSelected(intersects[0].object);
+                setSelected(intersects[0].object.name);
+                console.log(intersects[0].object.name);
             } else {
                 setSelected(null);
             }

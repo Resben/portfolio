@@ -1,13 +1,14 @@
 import { useAnimations, useGLTF } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
+import { act, Suspense, useEffect, useRef, useState } from "react";
 import { useSpring, animated, useSpringRef, to, config } from "@react-spring/three";
 import { Box } from '@react-three/drei';
+import * as THREE from "three";
 
 import mainScene from "../assets/3d/anotherScene.glb";
 
 import CanvasLoader from "./Loader";
-import { useResponsiveScale, CameraController, Lighting, CameraEvents, ZoomEvents, SelectionEvent, AnimatedCamera } from "./SceneController";
+import { useResponsiveScale, CameraController, Lighting, CameraEvents, ZoomEvents, SelectionEvent } from "./SceneController";
 
 const AnimatedGLB = ({ glb, scale, position }) => {
   const sceneRef = useRef();
@@ -36,35 +37,39 @@ const StaticGLB = ({ glb, scale, position }) => {
   );
 }
 
-const StateControl = (selected, setActiveCamera, setTargetPosition) => {
+const StateControl = (selected, switchToAnimatedCamera, switchToOriginalCamera, setTargetPosition, setTargetRotation) => {
   const [state, setState] = useState("World");
 
   useEffect(() => {
     if (selected) {
-      switch (selected.name) {
+      switch (selected) {
         case "World":
           setState("World");
           console.log("World");
-          setActiveCamera("main");
+          switchToOriginalCamera();
           setTargetPosition([0, 0, 0]);
+          setTargetRotation([0, 0, 0]);
           break;
         case "Art":
           setState("Art");
           console.log("Art");
-          setActiveCamera("animated");
+          switchToAnimatedCamera();
           setTargetPosition([10, 5, 0]);
+          setTargetRotation([0, 0, 0]);
           break;
         case "Portfolio":
           setState("Portfolio");
           console.log("Portfolio");
-          setActiveCamera("animated");
+          switchToAnimatedCamera();
           setTargetPosition([-10, 5, 0]);
+          setTargetRotation([0, 0, 0]);
           break;
         case "Games":
           setState("Games");
           console.log("Games");
-          setActiveCamera("animated");
-          setTargetPosition([10, 10, 10]);
+          switchToAnimatedCamera();
+          setTargetPosition([1, 2, 0]);
+          setTargetRotation([0, 0, 0]);
           break;
       }
     }
@@ -73,38 +78,85 @@ const StateControl = (selected, setActiveCamera, setTargetPosition) => {
   return { state };
 }
 
-const ControlStuff = () => {
-  const [activeCamera, setActiveCamera] = useState("main");
+const ControlStuff = ({switchToOriginalCamera, switchToAnimatedCamera, toggleCameraState, activeCamera, animatedCameraRef, mainCameraRef}) => {
   const [selected, setSelected] = useState(null);
   const [targetPosition, setTargetPosition] = useState([0, 0, 0]);
+  const [targetRotation, setTargetRotation] = useState([0, 0, 0]);
 
   const { modelScale, modelPosition } = useResponsiveScale();
   const { zoom } = ZoomEvents();
-  const { state } = StateControl(selected, setActiveCamera, setTargetPosition);
+  const { state } = StateControl(selected, switchToAnimatedCamera, switchToOriginalCamera, setTargetPosition, setTargetRotation);
   const { rotationX, rotationY } = CameraEvents(state);
 
+  const isFirstRender = useRef(true);
   const springRef = useSpringRef();
 
   const spring = useSpring({
     ref: springRef,
-    from: { position: [0, 0, 0] },
+    from: { position: mainCameraRef.current.position.toArray() },
     to: { position: targetPosition},
-    config: { mass: 5, tension: 400, friction: 50 },
+    config: { mass: 10, tension: 400, friction: 50 },
+    onStart: () => {
+      switchToAnimatedCamera();
+      toggleCameraState();
+      console.log("cam pos = ", mainCameraRef.current.position.toArray());
+      animatedCameraRef.current.updateMatrixWorld();
+    },
+    onRest: () => {
+      switchToOriginalCamera();
+      toggleCameraState();
+      mainCameraRef.current.position.set(targetPosition[0], targetPosition[1], targetPosition[2]);
+      mainCameraRef.current.updateMatrixWorld();
+
+      // Need to lock main camera and set position/rotation to animated camera
+    },
+    onChange: (springValues) => {
+      if (animatedCameraRef.current) {
+        const [x, y, z] = springValues.value.position;
+        animatedCameraRef.current.position.set(x, y, z);
+        animatedCameraRef.current.updateMatrixWorld();
+      }
+    }
   });
 
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    } 
     springRef.start();
   }, [targetPosition, springRef]);
 
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === 't') {
+        setSelected("Games");
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('keydown', handleKeyPress);
+
+    // Clean up event listener
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, []); // Empty dependency array ensures this runs only once
+
   return (
     <group>
-      {activeCamera === "main" && <CameraController zoom={zoom} rotationX={rotationX} rotationY={rotationY} animate={false} />}
-      {activeCamera === "animated" && <AnimatedCamera position={spring.position} rotation={[0, 0, 0]} />}
+      {activeCamera === "main" && <CameraController zoom={zoom} rotationX={rotationX} rotationY={rotationY} state={state} />}
+      <animated.perspectiveCamera 
+        position={spring.position} 
+        rotation={[0, 0, 0]} 
+        ref={animatedCameraRef} 
+        visible={activeCamera === "animated"} // Control visibility
+      />
       <Lighting />
       <StaticGLB glb={mainScene} scale={modelScale} position={modelPosition} />
       <SelectionEvent setSelected={setSelected} />
       <animated.mesh position={spring.position}>
-      <Box args={[1, 1, 1]} position={[0, 0, 0]}>
+      <Box args={[1, 1, 1]} position={[1, 2.0, 0]}>
           <meshStandardMaterial attach="material" color="orange" />
       </Box>
       </animated.mesh>
@@ -127,6 +179,46 @@ const IdleStuff = () => {
     </group>
   );
 };
+
+const Setup = () => {
+  const { set, camera: defaultCamera } = useThree();
+  const mainCameraRef = useRef(defaultCamera);
+  const animatedCameraRef = useRef();
+  const [activeCamera, setActiveCamera] = useState("main"); // Track active camera
+
+  useEffect(() => {
+    mainCameraRef.current = defaultCamera;
+    animatedCameraRef.current = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  }, []);
+
+  const switchToOriginalCamera = () => {
+    set({ camera: mainCameraRef.current });
+  }
+
+  const switchToAnimatedCamera = () => {  
+    set({ camera: animatedCameraRef.current });
+  }
+
+  const toggleCameraState = () => {
+    setActiveCamera(prevCamera => {
+      const newCamera = prevCamera === "main" ? "animated" : "main";
+      return newCamera;
+    });
+  };
+
+  return (
+    <group>
+        <ControlStuff 
+          switchToAnimatedCamera={switchToAnimatedCamera} 
+          switchToOriginalCamera={switchToOriginalCamera}
+          toggleCameraState={toggleCameraState}
+          activeCamera={activeCamera} 
+          animatedCameraRef={animatedCameraRef}
+          mainCameraRef={mainCameraRef}/>
+        <IdleStuff />
+    </group>
+  );
+}
 
 const SpacemanCanvas = () => {
 
@@ -159,8 +251,7 @@ const SpacemanCanvas = () => {
   return (
     <Canvas className={`w-full h-screen bg-transparent z-10`} camera={{ near: 0.1, far: 1000 }}>
       <Suspense fallback={<CanvasLoader />}>
-        <ControlStuff />
-        <IdleStuff />
+        <Setup />
       </Suspense>
     </Canvas>
   );
