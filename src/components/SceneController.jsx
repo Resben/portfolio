@@ -10,22 +10,22 @@ export const useResponsiveScale = () => {
 
     useEffect(() => {
         const handleResize = () => {
-            if (window.innerWidth < 768) {
-                setScale([1, 1, 1]);
-                setPosition([0.2, -0.1, 0]);
-            } else if (window.innerWidth < 1024) {
-                setScale([1.33, 1.33, 1.33]);
-                setPosition([0.2, -0.3, 0]);
-            } else if (window.innerWidth < 1280) {
-                setScale([1.5, 1.5, 1.5]);
-                setPosition([0.2, -0.4, 0]);
-            } else if (window.innerWidth < 1536) {
-                setScale([1.66, 1.66, 1.66]);
-                setPosition([0.2, -0.5, 0]);
-            } else {
-                setScale([2, 2, 2]);
-                setPosition([0.2, -0.7, 0]);
-            }
+            // if (window.innerWidth < 768) {
+            //     setScale([1, 1, 1]);
+            //     setPosition([0.2, -0.1, 0]);
+            // } else if (window.innerWidth < 1024) {
+            //     setScale([1.33, 1.33, 1.33]);
+            //     setPosition([0.2, -0.3, 0]);
+            // } else if (window.innerWidth < 1280) {
+            //     setScale([1.5, 1.5, 1.5]);
+            //     setPosition([0.2, -0.4, 0]);
+            // } else if (window.innerWidth < 1536) {
+            //     setScale([1.66, 1.66, 1.66]);
+            //     setPosition([0.2, -0.5, 0]);
+            // } else {
+            //     setScale([2, 2, 2]);
+            //     setPosition([0.2, -0.7, 0]);
+            // }
         };
 
         window.addEventListener("resize", handleResize);
@@ -39,33 +39,39 @@ export const useResponsiveScale = () => {
     return { scale, modelPosition };
 };
 
-export const CameraController = ({ zoom, rotationX, rotationY, state }) => {
-    const { camera } = useThree();
-
+export const CameraController = ({ position, zoom, rotationX, rotationY, state, anim, camera }) => {
     useEffect(() => {
 
-        if (state != "World") return;
+        if (state == "World" && anim != "animated")
+        {
+            const distance = 15 * zoom; // Distance from the object
+            // Clamp the vertical rotation (rotationX) between limits (in radians)
+            const minVerticalAngle = 0; // Limit up (e.g., 0 degrees up)
+            const maxVerticalAngle = Math.PI / 4; // Limit down (e.g., 45 degrees down)
+            const clampedRotationX = Math.max(minVerticalAngle, Math.min(maxVerticalAngle, rotationX));
+    
+            const phi = clampedRotationX; // Vertical rotation
+            const theta = rotationY; // Horizontal rotation (no limits for full 360)
+    
+            // Convert spherical coordinates to Cartesian
+            camera.current.position.x = distance * Math.sin(theta) * Math.cos(phi);
+            camera.current.position.y = distance * Math.sin(phi);
+            camera.current.position.z = distance * Math.cos(theta) * Math.cos(phi);
+    
+            camera.current.lookAt(0, 0, 0);
+    
+            camera.current.updateProjectionMatrix();
+        }
 
-        const distance = 15 * zoom; // Distance from the object
-        // Clamp the vertical rotation (rotationX) between limits (in radians)
-        const minVerticalAngle = 0; // Limit up (e.g., 0 degrees up)
-        const maxVerticalAngle = Math.PI / 4; // Limit down (e.g., 45 degrees down)
-        const clampedRotationX = Math.max(minVerticalAngle, Math.min(maxVerticalAngle, rotationX));
-
-        const phi = clampedRotationX; // Vertical rotation
-        const theta = rotationY; // Horizontal rotation (no limits for full 360)
-
-        // Convert spherical coordinates to Cartesian
-        camera.position.x = distance * Math.sin(theta) * Math.cos(phi);
-        camera.position.y = distance * Math.sin(phi);
-        camera.position.z = distance * Math.cos(theta) * Math.cos(phi);
-
-        camera.lookAt(0, 0, 0);
-
-        camera.updateProjectionMatrix();
     }, [rotationX, rotationY, camera, zoom]);
 
-    return null;
+    return (
+        <animated.perspectiveCamera 
+            position={position} 
+            rotation={[0, 0, 0]} 
+            ref={camera} 
+      />
+    );
 };
 
 export const CameraEvents = (state) => {

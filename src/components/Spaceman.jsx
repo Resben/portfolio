@@ -37,7 +37,7 @@ const StaticGLB = ({ glb, scale, position }) => {
   );
 }
 
-const StateControl = (selected, switchToAnimatedCamera, switchToOriginalCamera, setTargetPosition, setTargetRotation) => {
+const StateControl = (selected, setTargetPosition, setTargetRotation) => {
   const [state, setState] = useState("World");
 
   useEffect(() => {
@@ -46,30 +46,26 @@ const StateControl = (selected, switchToAnimatedCamera, switchToOriginalCamera, 
         case "World":
           setState("World");
           console.log("World");
-          switchToOriginalCamera();
           setTargetPosition([0, 0, 0]);
           setTargetRotation([0, 0, 0]);
           break;
         case "Art":
           setState("Art");
           console.log("Art");
-          switchToAnimatedCamera();
           setTargetPosition([10, 5, 0]);
           setTargetRotation([0, 0, 0]);
           break;
         case "Portfolio":
           setState("Portfolio");
           console.log("Portfolio");
-          switchToAnimatedCamera();
           setTargetPosition([-10, 5, 0]);
           setTargetRotation([0, 0, 0]);
           break;
         case "Games":
           setState("Games");
           console.log("Games");
-          switchToAnimatedCamera();
-          setTargetPosition([1, 2, 0]);
-          setTargetRotation([0, 0, 0]);
+          setTargetPosition([1.2, 1.5, 0.4]);
+          setTargetRotation([0, 3.2, 0]);
           break;
       }
     }
@@ -78,54 +74,54 @@ const StateControl = (selected, switchToAnimatedCamera, switchToOriginalCamera, 
   return { state };
 }
 
-const ControlStuff = ({switchToOriginalCamera, switchToAnimatedCamera, toggleCameraState, activeCamera, animatedCameraRef, mainCameraRef}) => {
+const ControlStuff = ({toggleCameraState, activeCamera, camera}) => {
   const [selected, setSelected] = useState(null);
   const [targetPosition, setTargetPosition] = useState([0, 0, 0]);
   const [targetRotation, setTargetRotation] = useState([0, 0, 0]);
 
   const { modelScale, modelPosition } = useResponsiveScale();
   const { zoom } = ZoomEvents();
-  const { state } = StateControl(selected, switchToAnimatedCamera, switchToOriginalCamera, setTargetPosition, setTargetRotation);
+  const { state } = StateControl(selected, setTargetPosition, setTargetRotation);
   const { rotationX, rotationY } = CameraEvents(state);
 
   const isFirstRender = useRef(true);
   const springRef = useSpringRef();
 
-  const spring = useSpring({
+  const [springProps, setSpring] = useSpring(() => ({
     ref: springRef,
-    from: { position: mainCameraRef.current.position.toArray() },
-    to: { position: targetPosition},
-    config: { mass: 10, tension: 400, friction: 50 },
+    config: { mass: 10, tension: 100, friction: 50 },
     onStart: () => {
-      switchToAnimatedCamera();
       toggleCameraState();
-      console.log("cam pos = ", mainCameraRef.current.position.toArray());
-      animatedCameraRef.current.updateMatrixWorld();
     },
     onRest: () => {
-      switchToOriginalCamera();
       toggleCameraState();
-      mainCameraRef.current.position.set(targetPosition[0], targetPosition[1], targetPosition[2]);
-      mainCameraRef.current.updateMatrixWorld();
-
-      // Need to lock main camera and set position/rotation to animated camera
     },
     onChange: (springValues) => {
-      if (animatedCameraRef.current) {
+      if (camera.current) {
         const [x, y, z] = springValues.value.position;
-        animatedCameraRef.current.position.set(x, y, z);
-        animatedCameraRef.current.updateMatrixWorld();
+        camera.current.position.set(x, y, z);
+        const [rx, ry, rz] = springValues.value.rotation;
+        camera.current.rotation.set(rx, ry, rz);
+
+        camera.current.updateMatrixWorld();
       }
     }
-  });
+  }));
 
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     } 
-    springRef.start();
-  }, [targetPosition, springRef]);
+
+    if (camera.current) {
+        const positionArray = camera.current.position.toArray();
+        const rotationArray = camera.current.rotation.toArray();
+        setSpring({ from: { position: positionArray, rotation: rotationArray }, to: { position: targetPosition, rotation: targetRotation } });
+        springRef.start();
+    }
+    
+    }, [targetPosition, targetRotation]); // Trigger when the target position changes
 
   useEffect(() => {
     const handleKeyPress = (event) => {
@@ -145,17 +141,11 @@ const ControlStuff = ({switchToOriginalCamera, switchToAnimatedCamera, toggleCam
 
   return (
     <group>
-      {activeCamera === "main" && <CameraController zoom={zoom} rotationX={rotationX} rotationY={rotationY} state={state} />}
-      <animated.perspectiveCamera 
-        position={spring.position} 
-        rotation={[0, 0, 0]} 
-        ref={animatedCameraRef} 
-        visible={activeCamera === "animated"} // Control visibility
-      />
+      <CameraController position={springProps.position} rotation={springProps.rotation} zoom={zoom} rotationX={rotationX} rotationY={rotationY} state={state} anim={activeCamera} camera={camera} />
       <Lighting />
       <StaticGLB glb={mainScene} scale={modelScale} position={modelPosition} />
       <SelectionEvent setSelected={setSelected} />
-      <animated.mesh position={spring.position}>
+      <animated.mesh position={springProps.position}>
       <Box args={[1, 1, 1]} position={[1, 2.0, 0]}>
           <meshStandardMaterial attach="material" color="orange" />
       </Box>
@@ -180,73 +170,7 @@ const IdleStuff = () => {
   );
 };
 
-const Setup = () => {
-  const { set, camera: defaultCamera } = useThree();
-  const mainCameraRef = useRef(defaultCamera);
-  const animatedCameraRef = useRef();
-  const [activeCamera, setActiveCamera] = useState("main"); // Track active camera
-
-  useEffect(() => {
-    mainCameraRef.current = defaultCamera;
-    animatedCameraRef.current = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  }, []);
-
-  const switchToOriginalCamera = () => {
-    set({ camera: mainCameraRef.current });
-  }
-
-  const switchToAnimatedCamera = () => {  
-    set({ camera: animatedCameraRef.current });
-  }
-
-  const toggleCameraState = () => {
-    setActiveCamera(prevCamera => {
-      const newCamera = prevCamera === "main" ? "animated" : "main";
-      return newCamera;
-    });
-  };
-
-  return (
-    <group>
-        <ControlStuff 
-          switchToAnimatedCamera={switchToAnimatedCamera} 
-          switchToOriginalCamera={switchToOriginalCamera}
-          toggleCameraState={toggleCameraState}
-          activeCamera={activeCamera} 
-          animatedCameraRef={animatedCameraRef}
-          mainCameraRef={mainCameraRef}/>
-        <IdleStuff />
-    </group>
-  );
-}
-
 const SpacemanCanvas = () => {
-
-  // const [{ position, rotation }, api] = useSpring(() => ({
-  //   position: [0, 5, 10],
-  //   rotation: [0, 0, 0],
-  //   config: { mass: 5, tension: 400, friction: 50 },
-  // }));
-
-  // useEffect(() => {
-  //   const newPosition = state === 'World' ? [0, 5, 10] : 
-  //                       state === 'Art' ? [10, 5, 0] : 
-  //                       state === 'Games' ? [-10, 5, 0] : 
-  //                       [10, 10, 10];
-
-  //   const newRotation = state === 'World' ? [0, 0, 0] : 
-  //                       state === 'Art' ? [0, Math.PI / 4, 0] : 
-  //                       state === 'Games' ? [0, -Math.PI / 4, 0] : 
-  //                       [0, 0, 0];
-
-  //   // api.start({
-  //   //   position: newPosition,
-  //   //   rotation: newRotation,
-  //   // });
-
-  //   console.log(position, rotation);
-
-  // }, [state, api]);
 
   return (
     <Canvas className={`w-full h-screen bg-transparent z-10`} camera={{ near: 0.1, far: 1000 }}>
@@ -258,3 +182,38 @@ const SpacemanCanvas = () => {
 };
 
 export default SpacemanCanvas;
+
+const Setup = () => {
+  const { camera: defaultCamera } = useThree();
+  const mainCameraRef = useRef(defaultCamera);
+  const [activeCamera, setActiveCamera] = useState("main"); // Track active camera
+
+  useEffect(() => {
+    mainCameraRef.current = defaultCamera;
+
+    mainCameraRef.current.position.x = 15 * Math.sin(0) * Math.cos(0);
+    mainCameraRef.current.position.y = 15 * Math.sin(0);
+    mainCameraRef.current.position.z = 15 * Math.cos(0) * Math.cos(0);
+
+    mainCameraRef.current.lookAt(0, 0, 0);
+
+    mainCameraRef.current.updateProjectionMatrix();
+  }, []);
+
+  const toggleCameraState = () => {
+    setActiveCamera(prevCamera => {
+      const newCamera = prevCamera === "main" ? "animated" : "main";
+      return newCamera;
+    });
+  };
+
+  return (
+    <group>
+        <ControlStuff 
+          toggleCameraState={toggleCameraState}
+          activeCamera={activeCamera} 
+          camera={mainCameraRef}/>
+        <IdleStuff />
+    </group>
+  );
+}
