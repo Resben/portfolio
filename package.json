@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
+    "@gsap/react": "^2.1.1",
     "@react-spring/three": "^9.7.5",
     "gsap": "^3.12.5",
     "maath": "^0.5.2",

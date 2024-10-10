@@ -4,7 +4,6 @@ import * as MATH from "../utils/mathUtils";
 
 import background from "../assets/game_development/background.png";
 
-
 const GameDevelopment = ({setSelected}) => {
     const screenRef = useRef();
     const hitboxRef = useRef();
@@ -35,17 +34,45 @@ const GameDevelopment = ({setSelected}) => {
                 <meshBasicMaterial map={texture}/>
             </mesh>}
 
-            <mesh
-                position={position}
+            <mesh position={[1.15, 1.63, 1]}
                 rotation={rotation}
                 ref={hitboxRef}
                 onClick={onClick}
                 onPointerOver={(e) => e.stopPropagation()} // Prevent event bubbling
                 onPointerOut={(e) => e.stopPropagation()}
-                visible={true} // Make the hitbox invisible
-            >
+                visible={true}>
                 <planeGeometry args={[0.1, 0.12]} />
                 <meshBasicMaterial transparent opacity={1} color="orange" />
+            </mesh>
+            <mesh position={[1.2, 1.63, 1]}
+                rotation={rotation}
+                ref={hitboxRef}
+                onClick={onClick}
+                onPointerOver={(e) => e.stopPropagation()} // Prevent event bubbling
+                onPointerOut={(e) => e.stopPropagation()}
+                visible={true}>
+                <planeGeometry args={[0.1, 0.12]} />
+                <meshBasicMaterial transparent opacity={1} color="red" />
+            </mesh>
+            <mesh position={[1.25, 1.63, 1]}
+                rotation={rotation}
+                ref={hitboxRef}
+                onClick={onClick}
+                onPointerOver={(e) => e.stopPropagation()} // Prevent event bubbling
+                onPointerOut={(e) => e.stopPropagation()}
+                visible={true}>
+                <planeGeometry args={[0.1, 0.12]} />
+                <meshBasicMaterial transparent opacity={1} color="blue" />
+            </mesh>
+            <mesh position={[1.3, 1.63, 1]}
+                rotation={rotation}
+                ref={hitboxRef}
+                onClick={onClick}
+                onPointerOver={(e) => e.stopPropagation()} // Prevent event bubbling
+                onPointerOut={(e) => e.stopPropagation()}
+                visible={true}>
+                <planeGeometry args={[0.1, 0.12]} />
+                <meshBasicMaterial transparent opacity={1} color="purple" />
             </mesh>
         </>
     );

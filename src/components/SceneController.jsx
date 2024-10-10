@@ -1,123 +1,62 @@
-import { useEffect, useState, useRef } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
-import { animated } from "@react-spring/three";
+import { useEffect, useRef } from "react";
+import { useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { gsap } from "gsap";
+import { OrbitControls } from "@react-three/drei";
 
-
-export const useResponsiveScale = () => {
-    const [scale, setScale] = useState([2, 2, 2]);
-    const [modelPosition, setPosition] = useState([0.2, -0.7, 0]);
-
+export function CameraTransition({ position, target, controls }) {
+    const controlsRef = useRef()
+    
     useEffect(() => {
-        const handleResize = () => {
-            // if (window.innerWidth < 768) {
-            //     setScale([1, 1, 1]);
-            //     setPosition([0.2, -0.1, 0]);
-            // } else if (window.innerWidth < 1024) {
-            //     setScale([1.33, 1.33, 1.33]);
-            //     setPosition([0.2, -0.3, 0]);
-            // } else if (window.innerWidth < 1280) {
-            //     setScale([1.5, 1.5, 1.5]);
-            //     setPosition([0.2, -0.4, 0]);
-            // } else if (window.innerWidth < 1536) {
-            //     setScale([1.66, 1.66, 1.66]);
-            //     setPosition([0.2, -0.5, 0]);
-            // } else {
-            //     setScale([2, 2, 2]);
-            //     setPosition([0.2, -0.7, 0]);
-            // }
-        };
+        if (controlsRef.current) {
 
-        window.addEventListener("resize", handleResize);
-        handleResize(); // initial resize
-
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
-    }, []);
-
-    return { scale, modelPosition };
-};
-
-export const CameraController = ({ position, zoom, rotationX, rotationY, state, anim, camera }) => {
-    useEffect(() => {
-
-        if (state == "World" && anim != "animated")
-        {
-            const distance = 15 * zoom; // Distance from the object
-            // Clamp the vertical rotation (rotationX) between limits (in radians)
-            const minVerticalAngle = 0; // Limit up (e.g., 0 degrees up)
-            const maxVerticalAngle = Math.PI / 4; // Limit down (e.g., 45 degrees down)
-            const clampedRotationX = Math.max(minVerticalAngle, Math.min(maxVerticalAngle, rotationX));
-    
-            const phi = clampedRotationX; // Vertical rotation
-            const theta = rotationY; // Horizontal rotation (no limits for full 360)
-    
-            // Convert spherical coordinates to Cartesian
-            camera.current.position.x = distance * Math.sin(theta) * Math.cos(phi);
-            camera.current.position.y = distance * Math.sin(phi);
-            camera.current.position.z = distance * Math.cos(theta) * Math.cos(phi);
-    
-            camera.current.lookAt(0, 0, 0);
-    
-            camera.current.updateProjectionMatrix();
+            controlsRef.current.mouseButtons = {
+            LEFT: THREE.MOUSE.ROTATE,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: null
+          }
         }
-
-    }, [rotationX, rotationY, camera, zoom]);
-
-    return (
-        <animated.perspectiveCamera 
-            position={position} 
-            rotation={[0, 0, 0]} 
-            ref={camera} 
-      />
-    );
-};
-
-export const CameraEvents = (state) => {
-    const [rotationX, setRotationX] = useState(0);
-    const [rotationY, setRotationY] = useState(0);
-    const [isDragging, setIsDragging] = useState(false);
-    const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
+    
+        const canvas = document.querySelector('canvas')
+        if (canvas) {
+          canvas.addEventListener('contextmenu', (e) => {
+            e.stopPropagation()
+          })
+        }
+    
+        return () => {
+          if (canvas) {
+            canvas.removeEventListener('contextmenu', (e) => e.stopPropagation())
+          }
+        }
+      }, [])
 
     useEffect(() => {
+      // Disable rotation and zoom initially
+      if (controlsRef.current) {
+        controlsRef.current.enableRotate = false
+        controlsRef.current.enableZoom = false
+      }
+  
+      console.log(position, target, controls)
 
-        if (state != "World") return;
-
-        const handleMouseDown = (event) => {
-            setIsDragging(true);
-            setLastMousePos({ x: event.clientX, y: event.clientY });
-        };
-
-        const handleMouseMove = (event) => {
-            if (isDragging) {
-                const deltaX = event.clientX - lastMousePos.x;
-                const deltaY = event.clientY - lastMousePos.y;
-
-                setRotationX((prevRotationX) => prevRotationX + deltaY * 0.01);
-                setRotationY((prevRotationY) => prevRotationY + deltaX * 0.01);
-
-                setLastMousePos({ x: event.clientX, y: event.clientY });
-            }
-        };
-
-        const handleMouseUp = () => {
-            setIsDragging(false);
-        };
-
-        window.addEventListener("mousedown", handleMouseDown);
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseup", handleMouseUp);
-
-        return () => {
-            window.removeEventListener("mousedown", handleMouseDown);
-            window.removeEventListener("mousemove", handleMouseMove);
-            window.removeEventListener("mouseup", handleMouseUp);
-        };
-    }, [isDragging, lastMousePos, state]);
-
-    return { rotationX, rotationY };
-};
+      // GSAP Animation for camera position
+      gsap.to(controlsRef.current.object.position, { duration: 1.5, ease: "power1.inOut", x: position[0], y: position[1], z: position[2] })
+  
+      // GSAP Animation for camera target
+      gsap.to(controlsRef.current.target, { duration: 1.5, ease: "power1.inOut", x: target[0], y: target[1], z: target[2] })
+  
+      // Re-enable rotation and zoom after animation
+      const timer = setTimeout(() => {
+        controlsRef.current.enableRotate = controls
+        controlsRef.current.enableZoom = controls
+      }, 1500)
+  
+      return () => clearTimeout(timer)
+    }, [position, target, controls])
+  
+    return <OrbitControls ref={controlsRef} />
+  }
 
 export const Lighting = () => {
     return (
@@ -130,36 +69,6 @@ export const Lighting = () => {
         </>
     );
 };
-
-export const ZoomEvents = () => {
-    const [zoom, setZoom] = useState(1);
-
-    useEffect(() => {
-
-        const handleWheel = (event) => {
-            event.preventDefault();
-
-            const deltaY = event.deltaY;
-            const zoomFactor = 0.00025;
-
-            const minZoom = 0.5;
-            const maxZoom = 1;
-
-            setZoom((prevZoom) => {
-                const newZoom = prevZoom + deltaY * zoomFactor
-                return Math.max(minZoom, Math.min(maxZoom, newZoom));
-            });
-        };
-
-        window.addEventListener("wheel", handleWheel, { passive: false });
-
-        return () => {
-            window.removeEventListener("wheel", handleWheel, { passive: false });
-        };
-    }, []);
-
-    return { zoom };
-}
 
 export const SelectionEvent = ({ setSelected }) => {
     const raycaster = new THREE.Raycaster();
