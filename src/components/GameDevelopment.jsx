@@ -3,14 +3,17 @@ import { useThree, useLoader } from "@react-three/fiber";
 import * as THREE from "three";
 import * as MATH from "../utils/mathUtils";
 
-const Pager = ({ enabled, position, rotation, size, setPage, setPageIndex, pageID, pageIndex }) => {
+const Pager = ({ enabled, position, rotation, size, setPage, setPageIndex, pageID, pageIndex, parentPageIndex }) => {
     const hitboxRef = useRef();
 
     const onClick = () => {
         if (!enabled) return;
         console.log("Clicked on pager" + pageID);
         setPage(pageID);
+        setPageIndex(pageIndex);
     }
+
+    const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
 
     return (
         <mesh position={position}
@@ -21,7 +24,7 @@ const Pager = ({ enabled, position, rotation, size, setPage, setPageIndex, pageI
             onPointerOut={(e) => e.stopPropagation()}
             visible={true}>
             <planeGeometry args={size} />
-            <meshBasicMaterial transparent opacity={1} color="orange" />
+            <meshBasicMaterial transparent opacity={1} color={randomColor} />
         </mesh>
     );
 };
@@ -45,6 +48,7 @@ const BackButton = ({ enabled, position, size, rotation, setSelected, setPage, d
             setPageIndex(pageIndex - 1);
         }
     }
+    const randomColor = "red";
 
     return (
         <mesh position={position}
@@ -55,7 +59,7 @@ const BackButton = ({ enabled, position, size, rotation, setSelected, setPage, d
             onPointerOut={(e) => e.stopPropagation()}
             visible={true}>
             <planeGeometry args={size} />
-            <meshBasicMaterial transparent opacity={1} color="orange" />
+            <meshBasicMaterial transparent opacity={1} color={randomColor} />
         </mesh>
     );
 };
@@ -83,6 +87,12 @@ const GameDevelopment = ({setSelected, state}) => {
             'src/assets/game_development/beneath_the_clouds.png',
             'src/assets/game_development/beneath_more_info.png',
         ]
+    }
+
+    const pageDictionary = {
+        main: 0,
+        game1: 1,
+        game2: 2
     }
 
     const loadedTextures = useLoader(THREE.TextureLoader, Object.values(textureDictionary).flat());
@@ -118,9 +128,15 @@ const GameDevelopment = ({setSelected, state}) => {
 
     return (
         <>
-            <Pager enabled={enabled} position={[0.5, 0.5, 0]} rotation={MATH.toRadiansArray([0, 180, 0])} size={[0.5, 0.5]} setPage={setCurrentPage} setPageIndex={setCurrentPageIndex} pageID={"game1"} pageIndex={0} />
-            <Pager enabled={enabled} position={[0.5, -0.5, 0]} rotation={MATH.toRadiansArray([0, 180, 0])} size={[0.5, 0.5]} setPage={setCurrentPage} setPageIndex={setCurrentPageIndex} pageID={"game2"} pageIndex={0} />
-            <BackButton enabled={enabled} position={[-0.5, 0.5, 0]} rotation={MATH.toRadiansArray([0, 180, 0])}  size={[0.5, 0.5]} setSelected={setSelected} setPage={setCurrentPage} defaultPage={"main"} setPageIndex={setCurrentPageIndex} pageID={currentPage} pageIndex={0} />
+            <Pager 
+                enabled={enabled} position={[0.95, 2.25, 1]} rotation={MATH.toRadiansArray([0, 180, 0])} size={[0.1, 0.1]} 
+                setPage={setCurrentPage} setPageIndex={setCurrentPageIndex} pageID={"game1"} pageIndex={0} />
+                <Pager 
+                    enabled={enabled} position={[0.95, 2.25, 1]} rotation={MATH.toRadiansArray([0, 180, 0])} size={[0.1, 0.1]} 
+                    setPage={setCurrentPage} setPageIndex={setCurrentPageIndex} pageID={"game1"} pageIndex={1} 
+                    parentPageIndex={0}/>
+            <Pager enabled={enabled} position={[1.2, 2.4, 1]} rotation={MATH.toRadiansArray([0, 180, 0])} size={[0.1, 0.1]} setPage={setCurrentPage} setPageIndex={setCurrentPageIndex} pageID={"game2"} pageIndex={0} />
+            <BackButton enabled={enabled} position={[1.2, 2.25, 1]} rotation={MATH.toRadiansArray([0, 180, 0])}  size={[0.1, 0.1]} setSelected={setSelected} setPage={setCurrentPage} defaultPage={"main"} setPageIndex={setCurrentPageIndex} pageID={currentPage} pageIndex={0} />
         </>
     );
 };
