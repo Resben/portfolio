@@ -8,7 +8,7 @@ import mainScene from "../assets/3d/anotherScene.glb";
 
 import CanvasLoader from "./Loader";
 import { CameraTransition, Lighting, SelectionEvent } from "./SceneController";
-import GameDevelopment from "./GameDevelopment";
+import ScreenSetup from "./ScreenSetup";
 
 const AnimatedGLB = ({ glb, scale, position }) => {
   const sceneRef = useRef();
@@ -130,7 +130,7 @@ const ControlStuff = () => {
       <Lighting />
       <StaticGLB glb={mainScene}/>
       <SelectionEvent setSelected={setSelected} />
-      <GameDevelopment setSelected={setSelected} state={state}/>
+      <ScreenSetup setSelected={setSelected} state={state}/>
       <animated.mesh>
       <Box args={[1, 1, 1]} position={[1, 6.0, 0]}>
           <meshStandardMaterial attach="material" color="orange" name="hs" />
