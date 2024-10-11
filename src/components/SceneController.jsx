@@ -38,8 +38,6 @@ export function CameraTransition({ position, target, controls }) {
         controlsRef.current.enableZoom = false
       }
   
-      console.log(position, target, controls)
-
       // GSAP Animation for camera position
       gsap.to(controlsRef.current.object.position, { duration: 1.5, ease: "power1.inOut", x: position[0], y: position[1], z: position[2] })
   

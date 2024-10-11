@@ -104,13 +104,12 @@ const ControlStuff = () => {
   const [selected, setSelected] = useState(null);
   const { state } = StateControl(selected);
   const { position, target, controls } = CameraPosition(state);
-
-  console.log(controls);
-
+  
   useEffect(() => {
 
   }, [state]);
 
+  // TESTING
   useEffect(() => {
     const handleKeyPress = (event) => {
       if (event.key === 't') {
@@ -118,14 +117,12 @@ const ControlStuff = () => {
       }
     };
 
-    // Add event listener
     window.addEventListener('keydown', handleKeyPress);
 
-    // Clean up event listener
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, []); // Empty dependency array ensures this runs only once
+  }, []);
 
   return (
     <group>
@@ -133,7 +130,7 @@ const ControlStuff = () => {
       <Lighting />
       <StaticGLB glb={mainScene}/>
       <SelectionEvent setSelected={setSelected} />
-      <GameDevelopment setSelected={setSelected}/>
+      <GameDevelopment setSelected={setSelected} state={state}/>
       <animated.mesh>
       <Box args={[1, 1, 1]} position={[1, 6.0, 0]}>
           <meshStandardMaterial attach="material" color="orange" name="hs" />
